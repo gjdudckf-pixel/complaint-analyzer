@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>고소장·진정서 핵심 쟁점 분석기</title>
+  <meta name="theme-color" content="#1e3a8a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="쟁점분석기" />
+  <link rel="manifest" href="./manifest.json" />
+  <link id="appIcon" rel="icon" type="image/png" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    @page {
+      size: A4;
+      margin: 15mm 14mm;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #ffffff !important; color: #0f172a !important; font-size: 10.5pt; }
+      main { display: block !important; padding: 0 !important; margin: 0 !important; max-width: none !important; }
+      aside { width: 100% !important; }
+      .print-full { position: static !important; width: 100% !important; max-width: none !important; box-shadow: none !important; border: none !important; padding: 0 !important; }
+      #reportPreview { max-height: none !important; overflow: visible !important; }
+      .print-break-avoid { break-inside: avoid; page-break-inside: avoid; }
+    }
+    .tab-active {
+      border-bottom: 2px solid #1e40af;
+      color: #1e40af;
+      font-weight: 600;
+    }
+    .toast-enter {
+      animation: slideUp 0.2s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Access Lock Screen -->
+  <div id="lockScreen" class="no-print fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center">
+      <div class="w-12 h-12 rounded-xl bg-blue-900 text-white flex items-center justify-center text-xl font-bold mx-auto">⚖</div>
+      <div>
+        <h2 class="text-base font-bold text-slate-900">접근 권한 확인</h2>
+        <p class="text-xs text-slate-500 mt-1">허용된 사용자만 이용할 수 있습니다.<br />공유받은 비밀번호를 입력해 주세요.</p>
+      </div>
+      <form id="lockForm" class="space-y-2.5">
+        <input id="lockInput" type="password" autocomplete="current-password" placeholder="비밀번호 입력 (기본값: 2026)" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-600" />
+        <p id="lockError" class="hidden text-xs text-rose-600 font-medium">비밀번호가 일치하지 않습니다.</p>
+        <button type="submit" class="w-full py-2.5 rounded-lg bg-blue-900 hover:bg-blue-800 text-white text-sm font-semibold transition">
+          잠금 해제
+        </button>
+      </form>
+      <p class="text-[11px] text-slate-400">※ 배포 전 index.html 내 ACCESS_PASSCODE 값을 변경하세요.</p>
+    </div>
+  </div>
+
+  <!-- Top Navigation Bar -->
+  <header class="no-print bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-8 h-8 rounded-lg bg-blue-900 text-white flex items-center justify-center font-bold text-sm shrink-0">⚖</div>
+        <div class="min-w-0">
+          <h1 class="text-sm sm:text-base font-bold text-slate-900 truncate">고소장·진정서 핵심 쟁점 분석기</h1>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button id="btnLockApp" type="button" class="px-2.5 py-1.5 text-xs font-medium rounded-md border border-slate-300 hover:bg-slate-50 text-slate-700 transition">
+          잠금
+        </button>
+        <button id="btnInstallPwa" type="button" class="px-2.5 py-1.5 text-xs font-medium rounded-md bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 transition">
+          앱 설치
+        </button>
+        <button id="btnLoadSampleFraud" type="button" class="px-2.5 py-1.5 text-xs font-medium rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+          사기 샘플
+        </button>
+        <button id="btnLoadSampleDefamation" type="button" class="px-2.5 py-1.5 text-xs font-medium rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 transition hidden sm:inline-flex">
+          명예훼손 샘플
+        </button>
+        <button id="btnResetAll" type="button" class="px-2.5 py-1.5 text-xs font-medium rounded-md border border-slate-300 hover:bg-slate-50 text-slate-600 transition">
+          초기화
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Input & Analysis Controls -->
+    <section class="no-print lg:col-span-7 flex flex-col gap-4">
+
+      <!-- Document Paste & Auto-Extractor Card -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900">원문 입력 및 자동 쟁점 추출</h2>
+            <p class="text-xs text-slate-500">고소장·진정서 PDF 또는 텍스트(.txt) 파일을 불러오거나 원문을 붙여넣어 핵심 단서를 추출합니다.</p>
+          </div>
+          <label class="cursor-pointer px-3 py-1.5 text-xs font-medium rounded-md bg-blue-50 text-blue-800 hover:bg-blue-100 transition">
+            PDF / 텍스트 불러오기
+            <input id="fileInput" type="file" accept=".pdf,.txt,.md,.csv,application/pdf" class="hidden" />
+          </label>
+        </div>
+        <textarea id="rawText" rows="5" placeholder="여기에 고소장, 진정서, 고발장 등의 원문을 붙여넣으세요..." class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent resize-y"></textarea>
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <div id="extractBadges" class="flex flex-wrap gap-1.5 text-xs text-slate-500">
+            <span>추출 대기 중</span>
+          </div>
+          <button id="btnAutoAnalyze" type="button" class="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-blue-900 hover:bg-blue-800 text-white transition shrink-0">
+            원문 자동 분석 적용
+          </button>
+        </div>
+      </div>
+
+      <!-- Analysis Step Tabs -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="flex border-b border-slate-200 overflow-x-auto text-xs sm:text-sm">
+          <button type="button" data-tab="basic" class="tab-btn tab-active px-4 py-3 whitespace-nowrap transition">1. 기본·절차</button>
+          <button type="button" data-tab="elements" class="tab-btn px-4 py-3 whitespace-nowrap text-slate-600 hover:text-slate-900 transition">2. 범죄성립요건</button>
+          <button type="button" data-tab="evidence" class="tab-btn px-4 py-3 whitespace-nowrap text-slate-600 hover:text-slate-900 transition">3. 입증자료</button>
+          <button type="button" data-tab="investigation" class="tab-btn px-4 py-3 whitespace-nowrap text-slate-600 hover:text-slate-900 transition">4. 쟁점·수사착안</button>
+        </div>
+
+        <div class="p-4 sm:p-5">
+          <!-- TAB 1: Basic & Procedural -->
+          <div id="panel-basic" class="tab-panel space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">서류 유형</label>
+                <select id="docType" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white">
+                  <option value="고소장">고소장</option>
+                  <option value="진정서">진정서</option>
+                  <option value="고발장">고발장</option>
+                  <option value="진술서">진술서</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">사건명 / 제목</label>
+                <input id="caseTitle" type="text" placeholder="예: 투자금 편취 사기 고소 사건" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">고소인 / 진정인</label>
+                <input id="complainant" type="text" placeholder="성명 또는 법인명" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">피고소인 / 피진정인</label>
+                <input id="accused" type="text" placeholder="성명 또는 불상" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">검토자 / 작성자 (공유용)</label>
+                <input id="reviewer" type="text" placeholder="예: 홍길동 (형사팀)" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">문서 관리번호</label>
+                <input id="docNumber" type="text" placeholder="예: 2026-형사-014" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">당사자 관계 및 거래·소통 경위</label>
+              <textarea id="partyRelation" rows="2" placeholder="예: 지인 소개로 2024년 3월경 처음 알게 되어 사업 투자 계약을 체결함" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">주요 고소(진정) 사실 요약</label>
+              <textarea id="factSummary" rows="3" placeholder="일시, 장소, 행위 태양, 피해 금액 등을 육하원칙에 따라 요약" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
+            </div>
+
+            <!-- Procedural Checks -->
+            <div class="bg-slate-50 rounded-lg p-3.5 border border-slate-200 space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold text-slate-800">절차적 요건 검토 (공소시효·친고죄·관할)</h3>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">범행 종료일(기산일)</label>
+                  <input id="offenseDate" type="date" class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs bg-white" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">관할 수사기관</label>
+                  <input id="jurisdiction" type="text" placeholder="예: 피고소인 주소지 / 범행지 관할서" class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs bg-white" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">소추조건</label>
+                  <select id="prosecutionCondition" class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs bg-white">
+                    <option value="일반 범죄 (고소 불요)">일반 범죄 (고소 불요)</option>
+                    <option value="친고죄 (범인 인지일로부터 6개월)">친고죄 (범인 인지 후 6개월)</option>
+                    <option value="반의사불벌죄 (처벌불원 시 불기소)">반의사불벌죄 (합의 시 공소권 없음)</option>
+                  </select>
+                </div>
+              </div>
+              <div id="statuteNotice" class="text-xs text-slate-600 bg-white rounded-md px-3 py-2 border border-slate-200">
+                범행 종료일과 범죄 혐의를 선택하면 공소시효 만료 예정일(참고용)을 계산합니다.
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: Crime Elements -->
+          <div id="panel-elements" class="tab-panel hidden space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-2">검토할 범죄 혐의 선택 (복수 선택 가능)</label>
+              <div id="crimeChips" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <div id="elementsContainer" class="space-y-4"></div>
+          </div>
+
+          <!-- TAB 3: Evidence -->
+          <div id="panel-evidence" class="tab-panel hidden space-y-4">
+            <div class="bg-slate-50 rounded-lg p-3.5 border border-slate-200 space-y-2.5">
+              <h3 class="text-xs font-bold text-slate-800">제출된 입증자료 추가</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                <input id="evName" type="text" placeholder="자료명 (예: 계좌이체 내역서)" class="sm:col-span-5 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs bg-white" />
+                <select id="evStrength" class="sm:col-span-3 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs bg-white">
+                  <option value="입증 충분">입증 충분</option>
+                  <option value="보통 (보강 필요)">보통 (보강 필요)</option>
+                  <option value="증거 부족/불명확">증거 부족/불명확</option>
+                </select>
+                <input id="evNote" type="text" placeholder="입증 대상 및 평가 메모" class="sm:col-span-4 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs bg-white" />
+              </div>
+              <div class="flex justify-end">
+                <button id="btnAddEvidence" type="button" class="px-3 py-1.5 text-xs font-semibold rounded-md bg-blue-900 hover:bg-blue-800 text-white transition">
+                  + 자료 추가
+                </button>
+              </div>
+            </div>
+
+            <div id="evidenceList" class="space-y-2"></div>
+          </div>
+
+          <!-- TAB 4: Investigation Points -->
+          <div id="panel-investigation" class="tab-panel hidden space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">민사 대 형사 구별 검토</label>
+              <textarea id="civilVsCriminal" rows="2" placeholder="예: 단순 채무불이행(민사)이 아닌 차용 당시 변제 의사·능력 결여로 인한 형사상 사기 성립 여부 검토" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="text-xs font-semibold text-slate-700">피고소인 조사 핵심 질문사항</label>
+                <button id="btnSuggestQuestions" type="button" class="text-xs text-blue-700 hover:underline font-medium">선택 죄명 기준 추천 질문 채우기</button>
+              </div>
+              <textarea id="keyQuestions" rows="4" placeholder="1. 차용 당시 구체적인 변제 자금 조달 계획이 있었는지 여부..." class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-2">추가 확보 필요 자료 (보완수사 착안점)</label>
+              <div id="supplementChecks" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">종합 의견</label>
+              <textarea id="overallOpinion" rows="3" placeholder="혐의 인정 가능성, 보완수사 방향 등 종합 의견 작성" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Live Structured Summary Report -->
+    <aside class="lg:col-span-5 flex flex-col gap-3">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5 print-full sticky top-20">
+        <div class="no-print flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b border-slate-200">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900">구조화 요약 보고서 미리보기</h2>
+            <p class="text-xs text-slate-500">입력 내용이 실시간으로 5단계 보고서에 반영됩니다.</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button id="btnCopyReport" type="button" class="px-2.5 py-1.5 text-xs font-medium rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 transition">
+              복사
+            </button>
+            <button id="btnDownloadMd" type="button" class="px-2.5 py-1.5 text-xs font-medium rounded-md bg-blue-900 hover:bg-blue-800 text-white transition">
+              .md 저장
+            </button>
+            <button id="btnPrint" type="button" class="px-2.5 py-1.5 text-xs font-medium rounded-md border border-slate-300 hover:bg-slate-50 text-slate-700 transition">
+              인쇄 / PDF 저장
+            </button>
+          </div>
+        </div>
+
+        <!-- Scorecards -->
+        <div class="no-print grid grid-cols-3 gap-2 mb-4">
+          <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200 text-center">
+            <div class="text-[11px] text-slate-500">선택 혐의</div>
+            <div id="statCrimes" class="text-sm font-bold text-slate-900 mt-0.5">0건</div>
+          </div>
+          <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200 text-center">
+            <div class="text-[11px] text-slate-500">요건 충족률</div>
+            <div id="statElements" class="text-sm font-bold text-blue-800 mt-0.5">0%</div>
+          </div>
+          <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200 text-center">
+            <div class="text-[11px] text-slate-500">입증자료</div>
+            <div id="statEvidence" class="text-sm font-bold text-slate-900 mt-0.5">0건</div>
+          </div>
+        </div>
+
+        <!-- Rendered Report -->
+        <div id="reportPreview" class="space-y-4 text-xs sm:text-sm leading-relaxed text-slate-800 max-h-[68vh] overflow-y-auto pr-1">
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- PWA Install Guide Modal -->
+  <div id="pwaModal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-md w-full p-5 shadow-xl space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-slate-900">모바일 홈 화면에 앱으로 설치하기</h3>
+        <button id="btnClosePwaModal" type="button" class="text-slate-400 hover:text-slate-700 text-sm font-bold">✕</button>
+      </div>
+      <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
+        <p>정적 웹 호스팅(GitHub Pages, Netlify 등)에 올린 URL로 접속하면 모바일에서 앱처럼 설치할 수 있습니다.</p>
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1.5">
+          <p><strong>• 아이폰 (Safari):</strong> 하단 <strong>공유(□↑)</strong> 버튼 → <strong>「홈 화면에 추가」</strong> 선택</p>
+          <p><strong>• 안드로이드 (Chrome):</strong> 우측 상단 <strong>메뉴(⋮)</strong> → <strong>「앱 설치」</strong> 또는 <strong>「홈 화면에 추가」</strong></p>
+        </div>
+      </div>
+      <div class="flex justify-end">
+        <button id="btnConfirmPwaModal" type="button" class="px-4 py-1.5 rounded-lg bg-blue-900 text-white text-xs font-semibold hover:bg-blue-800 transition">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="no-print hidden fixed bottom-5 right-5 z-50 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-lg shadow-lg toast-enter"></div>
+
+  <script>
+    // =========================================================
+    // [접근 비밀번호 설정] 배포 전 아래 '2026'을 원하는 비밀번호로 변경하세요.
+    const ACCESS_PASSCODE = '2026';
+    // =========================================================
+
+    (function initAccessLock() {
+      const lockScreen = document.getElementById('lockScreen');
+      const lockForm = document.getElementById('lockForm');
+      const lockInput = document.getElementById('lockInput');
+      const lockError = document.getElementById('lockError');
+      const btnLockApp = document.getElementById('btnLockApp');
+
+      try {
+        if (sessionStorage.getItem('ca_unlocked') === '1') {
+          lockScreen.classList.add('hidden');
+        }
+      } catch (e) {}
+
+      lockForm.addEventListener('submit', e => {
+        e.preventDefault();
+        if (lockInput.value === ACCESS_PASSCODE) {
+          lockError.classList.add('hidden');
+          lockInput.value = '';
+          lockScreen.classList.add('hidden');
+          try { sessionStorage.setItem('ca_unlocked', '1'); } catch (e) {}
+        } else {
+          lockError.classList.remove('hidden');
+          lockInput.focus();
+          lockInput.select();
+        }
+      });
+
+      btnLockApp.addEventListener('click', () => {
+        try { sessionStorage.removeItem('ca_unlocked'); } catch (e) {}
+        lockInput.value = '';
+        lockError.classList.add('hidden');
+        lockScreen.classList.remove('hidden');
+        lockInput.focus();
+      });
+    })();
+
+    const CRIME_CATALOG = {
+      fraud: {
+        name: '사기 (형법 제347조)',
+        limitationYears: 10,
+        condition: '일반 범죄 (고소 불요)',
+        elements: [
+          { id: 'f1', type: '객관적', label: '기망행위 (허위 사실 고지 또는 진실 은폐)' },
+          { id: 'f2', type: '객관적', label: '피해자의 착오 및 처분행위 (재물 교부·재산상 이익 처분)' },
+          { id: 'f3', type: '객관적', label: '기망-착오-처분행위 간 인과관계 및 재산상 손해' },
+          { id: 'f4', type: '주관적', label: '편취의 범의 (행위 당시 변제 의사·능력 결여 등)' }
+        ],
+        questions: [
+          '1. 자금 수령(또는 계약 체결) 당시 본인의 실제 재무 상태와 변제 능력은 어떠했는가?',
+          '2. 고소인에게 고지한 자금 사용처와 실제 자금 집행 내역이 일치하는가?',
+          '3. 변제 기일 도과 이후 변제를 위해 어떤 구체적인 노력을 했는가?'
+        ]
+      },
+      embezzlement: {
+        name: '횡령·업무상횡령 (형법 제355조·제356조)',
+        limitationYears: 10,
+        condition: '일반 범죄 (고소 불요)',
+        elements: [
+          { id: 'e1', type: '객관적', label: '타인의 재물을 보관하는 지위 (위탁관계 존재)' },
+          { id: 'e2', type: '객관적', label: '횡령행위 (위탁 취지에 반하는 임의 소비·반환 거부)' },
+          { id: 'e3', type: '주관적', label: '불법영득의사 (자기 또는 제3자의 이익을 위한 처분 의사)' }
+        ],
+        questions: [
+          '1. 해당 금원/재산의 보관 경위 및 당사자 간 약정된 용도는 무엇인가?',
+          '2. 자금을 인출·이체하여 개인 용도나 다른 용도로 사용한 사실이 있는가?',
+          '3. 고소인의 반환 요구에 응하지 못한 구체적 사유는 무엇인가?'
+        ]
+      },
+      breach: {
+        name: '배임·업무상배임 (형법 제355조·제356조)',
+        limitationYears: 10,
+        condition: '일반 범죄 (고소 불요)',
+        elements: [
+          { id: 'b1', type: '객관적', label: '타인의 사무를 처리하는 자의 지위' },
+          { id: 'b2', type: '객관적', label: '임무에 위배하는 행위' },
+          { id: 'b3', type: '객관적', label: '본인에게 재산상 손해 발생 (또는 손해 발생의 위험)' },
+          { id: 'b4', type: '주관적', label: '배임의 고의 및 자기/제3자 이득 취득·손해 가해 인식' }
+        ],
+        questions: [
+          '1. 당시 의사결정 과정에서 내부 규정이나 이사회 결의 등 적법 절차를 거쳤는가?',
+          '2. 해당 거래로 인해 회사(본인)에 손해가 발생할 수 있음을 예견했는가?',
+          '3. 거래 상대방과 특수관계 또는 부정한 청탁·대가 수수가 있었는가?'
+        ]
+      },
+      defamation: {
+        name: '명예훼손 (형법 제307조)',
+        limitationYears: 7,
+        condition: '반의사불벌죄 (처벌불원 시 불기소)',
+        elements: [
+          { id: 'd1', type: '객관적', label: '공연성 (불특정 또는 다수인이 인식할 수 있는 상태 / 전파가능성)' },
+          { id: 'd2', type: '객관적', label: '구체적 사실(또는 허위사실)의 적시 및 피해자 특정' },
+          { id: 'd3', type: '주관적', label: '명예훼손의 고의 (허위사실인 경우 허위성 인식 포함)' }
+        ],
+        questions: [
+          '1. 문제 된 발언 또는 게시물을 작성·유포한 구체적인 일시와 장소/매체는 무엇인가?',
+          '2. 적시한 내용이 객관적 사실에 부합한다고 믿을 만한 상당한 근거가 있었는가?',
+          '3. 공익적 목적(비방 목적 부존재)을 주장한다면 그 구체적 근거는 무엇인가?'
+        ]
+      },
+      insult: {
+        name: '모욕 (형법 제311조)',
+        limitationYears: 5,
+        condition: '친고죄 (범인 인지 후 6개월)',
+        elements: [
+          { id: 'i1', type: '객관적', label: '공연성 (다수인 앞 또는 전파가능성 있는 상황)' },
+          { id: 'i2', type: '객관적', label: '피해자 특정성 및 사회적 평가를 저하시킬 추상적 판단·경멸적 감정 표현' },
+          { id: 'i3', type: '주관적', label: '모욕의 고의' }
+        ],
+        questions: [
+          '1. 당시 현장에 제3자가 몇 명 있었으며 발언을 직접 들었는가?',
+          '2. 해당 표현이 피해자를 지칭한 것이 맞는지, 어떤 경위로 발언했는가?'
+        ]
+      }
+    };
+
+    const SUPPLEMENT_OPTIONS = [
+      '피고소인 및 관련자 계좌거래내역 (금융거래정보 제출명령/영장)',
+      '통신사실확인자료 및 기지국/발신내역',
+      '휴대폰·PC 디지털 포렌식 (삭제된 대화록·문서 복구)',
+      '법인등기부등본·사업자등록 및 재무제표 (변제능력 확인)',
+      '핵심 참고인(중개인·동석자 등) 진술 확보',
+      '현장 CCTV 또는 출입기록 확보'
+    ];
+
+    const state = {
+      activeTab: 'basic',
+      docType: '고소장',
+      caseTitle: '',
+      complainant: '',
+      accused: '',
+      reviewer: '',
+      docNumber: '',
+      partyRelation: '',
+      factSummary: '',
+      offenseDate: '',
+      jurisdiction: '',
+      prosecutionCondition: '일반 범죄 (고소 불요)',
+      selectedCrimes: ['fraud'],
+      elementStatus: {}, // { elementId: { status: '충족'|'불명확'|'미충족', note: '' } }
+      evidences: [], // { id, name, strength, note }
+      civilVsCriminal: '',
+      keyQuestions: '',
+      supplementChecks: [],
+      overallOpinion: ''
+    };
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => el.classList.add('hidden'), 2600);
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function initElementDefaults() {
+      Object.values(CRIME_CATALOG).forEach(crime => {
+        crime.elements.forEach(el => {
+          if (!state.elementStatus[el.id]) {
+            state.elementStatus[el.id] = { status: '불명확', note: '' };
+          }
+        });
+      });
+    }
+
+    function renderTabs() {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        const isActive = btn.dataset.tab === state.activeTab;
+        btn.classList.toggle('tab-active', isActive);
+        btn.classList.toggle('text-slate-600', !isActive);
+      });
+      document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.toggle('hidden', panel.id !== `panel-${state.activeTab}`);
+      });
+    }
+
+    function renderCrimeChips() {
+      const container = document.getElementById('crimeChips');
+      container.innerHTML = Object.entries(CRIME_CATALOG).map(([key, crime]) => {
+        const active = state.selectedCrimes.includes(key);
+        return `
+          <button type="button" data-crime="${key}" class="crime-chip px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+            active ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+          }">
+            ${active ? '✓ ' : ''}${escapeHtml(crime.name)}
+          </button>
+        `;
+      }).join('');
+
+      container.querySelectorAll('.crime-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.crime;
+          if (state.selectedCrimes.includes(key)) {
+            if (state.selectedCrimes.length > 1) {
+              state.selectedCrimes = state.selectedCrimes.filter(c => c !== key);
+            } else {
+              showToast('최소 1개 이상의 범죄 혐의를 선택해야 합니다.');
+              return;
+            }
+          } else {
+            state.selectedCrimes.push(key);
+          }
+          renderCrimeChips();
+          renderElements();
+          updateStatuteNotice();
+          renderReport();
+        });
+      });
+    }
+
+    function renderElements() {
+      const container = document.getElementById('elementsContainer');
+      if (state.selectedCrimes.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-500">검토할 범죄 혐의를 선택하세요.</p>';
+        return;
+      }
+
+      container.innerHTML = state.selectedCrimes.map(crimeKey => {
+        const crime = CRIME_CATALOG[crimeKey];
+        const rows = crime.elements.map(el => {
+          const st = state.elementStatus[el.id] || { status: '불명확', note: '' };
+          return `
+            <div class="p-3 rounded-lg border border-slate-200 bg-slate-50 space-y-2">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold ${
+                    el.type === '객관적' ? 'bg-indigo-100 text-indigo-800' : 'bg-amber-100 text-amber-800'
+                  }">${el.type}</span>
+                  <span class="text-xs font-medium text-slate-800">${escapeHtml(el.label)}</span>
+                </div>
+                <select data-el-status="${el.id}" class="el-status-select rounded border border-slate-300 px-2 py-1 text-xs bg-white font-medium">
+                  <option value="충족" ${st.status === '충족' ? 'selected' : ''}>충족</option>
+                  <option value="불명확" ${st.status === '불명확' ? 'selected' : ''}>불명확</option>
+                  <option value="미충족" ${st.status === '미충족' ? 'selected' : ''}>미충족</option>
+                </select>
+              </div>
+              <input data-el-note="${el.id}" type="text" value="${escapeHtml(st.note)}" placeholder="해당 요건에 대한 사실관계·판단 메모..." class="el-note-input w-full rounded border border-slate-300 px-2.5 py-1.5 text-xs bg-white" />
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs sm:text-sm font-bold text-slate-900">${escapeHtml(crime.name)}</h4>
+              <span class="text-[11px] text-slate-500">공소시효 ${crime.limitationYears}년</span>
+            </div>
+            ${rows}
+          </div>
+        `;
+      }).join('');
+
+      container.querySelectorAll('.el-status-select').forEach(sel => {
+        sel.addEventListener('change', e => {
+          const id = e.target.dataset.elStatus;
+          state.elementStatus[id].status = e.target.value;
+          renderReport();
+        });
+      });
+
+      container.querySelectorAll('.el-note-input').forEach(inp => {
+        inp.addEventListener('input', e => {
+          const id = e.target.dataset.elNote;
+          state.elementStatus[id].note = e.target.value;
+          renderReport();
+        });
+      });
+    }
+
+    function renderEvidenceList() {
+      const container = document.getElementById('evidenceList');
+      if (state.evidences.length === 0) {
+        container.innerHTML = '<div class="text-center py-6 text-xs text-slate-400 border border-dashed border-slate-300 rounded-lg">아직 등록된 입증자료가 없습니다. 위 양식에서 추가하세요.</div>';
+        return;
+      }
+
+      container.innerHTML = state.evidences.map(ev => {
+        const badgeClass = ev.strength === '입증 충분'
+          ? 'bg-emerald-100 text-emerald-800'
+          : ev.strength === '보통 (보강 필요)'
+            ? 'bg-amber-100 text-amber-800'
+            : 'bg-rose-100 text-rose-800';
+        return `
+          <div class="flex items-start justify-between gap-3 p-3 rounded-lg border border-slate-200 bg-white">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-bold text-slate-900">${escapeHtml(ev.name)}</span>
+                <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${badgeClass}">${escapeHtml(ev.strength)}</span>
+              </div>
+              <p class="text-xs text-slate-600 mt-1">${escapeHtml(ev.note || '비고 없음')}</p>
+            </div>
+            <button type="button" data-del-ev="${ev.id}" class="del-ev-btn text-xs text-slate-400 hover:text-rose-600 shrink-0">삭제</button>
+          </div>
+        `;
+      }).join('');
+
+      container.querySelectorAll('.del-ev-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = Number(btn.dataset.delEv);
+          state.evidences = state.evidences.filter(item => item.id !== id);
+          renderEvidenceList();
+          renderReport();
+        });
+      });
+    }
+
+    function renderSupplementChecks() {
+      const container = document.getElementById('supplementChecks');
+      container.innerHTML = SUPPLEMENT_OPTIONS.map((opt, idx) => {
+        const checked = state.supplementChecks.includes(opt);
+        return `
+          <label class="flex items-start gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100 transition">
+            <input type="checkbox" data-supp-idx="${idx}" class="supp-cb mt-0.5 rounded text-blue-900" ${checked ? 'checked' : ''} />
+            <span class="text-slate-700 leading-snug">${escapeHtml(opt)}</span>
+          </label>
+        `;
+      }).join('');
+
+      container.querySelectorAll('.supp-cb').forEach(cb => {
+        cb.addEventListener('change', e => {
+          const opt = SUPPLEMENT_OPTIONS[Number(e.target.dataset.suppIdx)];
+          if (e.target.checked) {
+            if (!state.supplementChecks.includes(opt)) state.supplementChecks.push(opt);
+          } else {
+            state.supplementChecks = state.supplementChecks.filter(item => item !== opt);
+          }
+          renderReport();
+        });
+      });
+    }
+
+    function updateStatuteNotice() {
+      const el = document.getElementById('statuteNotice');
+      if (!state.offenseDate || state.selectedCrimes.length === 0) {
+        el.textContent = '범행 종료일과 범죄 혐의를 선택하면 공소시효 만료 예정일(참고용)을 계산합니다.';
+        return;
+      }
+      const base = new Date(state.offenseDate);
+      if (isNaN(base.getTime())) return;
+
+      const lines = state.selectedCrimes.map(k => {
+        const c = CRIME_CATALOG[k];
+        const exp = new Date(base);
+        exp.setFullYear(exp.getFullYear() + c.limitationYears);
+        const expStr = exp.toISOString().slice(0, 10);
+        const remainingDays = Math.ceil((exp - new Date()) / (1000 * 60 * 60 * 24));
+        const statusTxt = remainingDays < 0 ? '만료 경과 주의' : `약 ${remainingDays.toLocaleString()}일 남음`;
+        return `• ${c.name}: ${expStr} 만료 (${statusTxt})`;
+      });
+      el.innerHTML = lines.map(l => `<div>${escapeHtml(l)}</div>`).join('');
+    }
+
+    function generateMarkdownReport() {
+      const crimeNames = state.selectedCrimes.map(k => CRIME_CATALOG[k].name).join(', ') || '미지정';
+      const elementLines = state.selectedCrimes.map(k => {
+        const c = CRIME_CATALOG[k];
+        const items = c.elements.map(e => {
+          const st = state.elementStatus[e.id] || { status: '불명확', note: '' };
+          return `  - [${st.status}] (${e.type}) ${e.label}${st.note ? ` → ${st.note}` : ''}`;
+        }).join('\n');
+        return `- **${c.name}**\n${items}`;
+      }).join('\n');
+
+      const evLines = state.evidences.length
+        ? state.evidences.map(ev => `- **${ev.name}** [${ev.strength}]: ${ev.note || '비고 없음'}`).join('\n')
+        : '- 등록된 입증자료 없음';
+
+      const suppLines = state.supplementChecks.length
+        ? state.supplementChecks.map(s => `- ${s}`).join('\n')
+        : '- 추가 확보 자료 미지정';
+
+      return `# [${state.docType}] ${state.caseTitle || '사건 분석 요약 보고서'}
+
+## 1. 사건 개요 및 당사자 관계
+- **검토 대상 혐의**: ${crimeNames}
+- **고소인(진정인)**: ${state.complainant || '미기재'} / **피고소인(피진정인)**: ${state.accused || '미기재'}
+- **당사자 관계 및 경위**: ${state.partyRelation || '미기재'}
+- **절차적 요건**: 범행종료일(${state.offenseDate || '미기재'}), 소추조건(${state.prosecutionCondition}), 관할(${state.jurisdiction || '미기재'})
+
+## 2. 주요 고소(진정) 사실 요약
+${state.factSummary || '요약 내용 미기재'}
+
+## 3. 법리적 쟁점 및 성립요건 검토
+${elementLines}
+
+## 4. 증거 관계 및 입증력 평가
+${evLines}
+
+## 5. 종합 의견 및 수사 착안점 (보완수사 필요사항)
+- **민사 대 형사 구별**: ${state.civilVsCriminal || '검토 필요'}
+- **피고소인 조사 핵심 질문사항**:
+${state.keyQuestions || '미기재'}
+- **추가 확보 필요 자료**:
+${suppLines}
+- **종합 의견**: ${state.overallOpinion || '미기재'}
+`;
+    }
+
+    function renderReport() {
+      // Update Scorecards
+      let totalEl = 0;
+      let metEl = 0;
+      state.selectedCrimes.forEach(k => {
+        CRIME_CATALOG[k].elements.forEach(e => {
+          totalEl++;
+          if ((state.elementStatus[e.id]?.status) === '충족') metEl++;
+        });
+      });
+      const pct = totalEl > 0 ? Math.round((metEl / totalEl) * 100) : 0;
+
+      document.getElementById('statCrimes').textContent = `${state.selectedCrimes.length}건`;
+      document.getElementById('statElements').textContent = `${pct}%`;
+      document.getElementById('statEvidence').textContent = `${state.evidences.length}건`;
+
+      const crimeNames = state.selectedCrimes.map(k => CRIME_CATALOG[k].name).join(', ') || '미지정';
+      const preview = document.getElementById('reportPreview');
+
+      const elementsHtml = state.selectedCrimes.map(k => {
+        const c = CRIME_CATALOG[k];
+        const items = c.elements.map(e => {
+          const st = state.elementStatus[e.id] || { status: '불명확', note: '' };
+          const color = st.status === '충족'
+            ? 'text-emerald-700 bg-emerald-50'
+            : st.status === '미충족'
+              ? 'text-rose-700 bg-rose-50'
+              : 'text-amber-700 bg-amber-50';
+          return `
+            <li class="flex items-start gap-1.5 text-xs">
+              <span class="px-1.5 py-0.5 rounded font-semibold shrink-0 ${color}">${st.status}</span>
+              <div>
+                <span class="font-medium text-slate-800">${escapeHtml(e.label)}</span>
+                ${st.note ? `<div class="text-slate-500 mt-0.5">→ ${escapeHtml(st.note)}</div>` : ''}
+              </div>
+            </li>
+          `;
+        }).join('');
+        return `
+          <div class="mb-2.5">
+            <div class="font-semibold text-xs text-slate-900 mb-1">${escapeHtml(c.name)}</div>
+            <ul class="space-y-1.5">${items}</ul>
+          </div>
+        `;
+      }).join('');
+
+      const evidenceHtml = state.evidences.length
+        ? `<ul class="space-y-1 text-xs">${state.evidences.map(ev => `<li>• <strong>${escapeHtml(ev.name)}</strong> (${escapeHtml(ev.strength)}): ${escapeHtml(ev.note || '비고 없음')}</li>`).join('')}</ul>`
+        : '<p class="text-xs text-slate-400">등록된 입증자료가 없습니다.</p>';
+
+      const suppHtml = state.supplementChecks.length
+        ? `<ul class="space-y-1 text-xs">${state.supplementChecks.map(s => `<li>• ${escapeHtml(s)}</li>`).join('')}</ul>`
+        : '<p class="text-xs text-slate-400">선택된 보완수사 자료가 없습니다.</p>';
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+      preview.innerHTML = `
+        <div class="border-b-2 border-slate-900 pb-3 print-break-avoid">
+          <div class="flex items-center justify-between gap-2 mb-1.5">
+            <span class="inline-block px-2 py-0.5 rounded bg-blue-900 text-white text-[11px] font-semibold">${escapeHtml(state.docType)} 검토 보고서</span>
+            <span class="text-[11px] text-slate-500">작성일: ${todayStr}${state.docNumber ? ' | 문서번호: ' + escapeHtml(state.docNumber) : ''}</span>
+          </div>
+          <h3 class="text-base sm:text-lg font-bold text-slate-900">${escapeHtml(state.caseTitle || '사건명을 입력하세요')}</h3>
+          <div class="mt-2 grid grid-cols-2 gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2 text-[11px] text-slate-700">
+            <div><strong>고소(진정)인:</strong> ${escapeHtml(state.complainant || '미기재')}</div>
+            <div><strong>피고소(진정)인:</strong> ${escapeHtml(state.accused || '미기재')}</div>
+            <div><strong>검토자:</strong> ${escapeHtml(state.reviewer || '미기재')}</div>
+            <div><strong>요건 충족률:</strong> ${pct}% (${metEl}/${totalEl})</div>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-bold text-blue-900 uppercase tracking-wide mb-1">1. 사건 개요 및 당사자 관계</h4>
+          <p class="text-xs"><strong>혐의:</strong> ${escapeHtml(crimeNames)}</p>
+          <p class="text-xs"><strong>당사자:</strong> 고소(진정)인 ${escapeHtml(state.complainant || '미기재')} ↔ 피고소(진정)인 ${escapeHtml(state.accused || '미기재')}</p>
+          <p class="text-xs"><strong>관계/경위:</strong> ${escapeHtml(state.partyRelation || '미기재')}</p>
+          <p class="text-xs"><strong>절차 검토:</strong> 범행종료일 ${escapeHtml(state.offenseDate || '미기재')} | ${escapeHtml(state.prosecutionCondition)} | 관할 ${escapeHtml(state.jurisdiction || '미기재')}</p>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-bold text-blue-900 uppercase tracking-wide mb-1">2. 주요 고소(진정) 사실 요약</h4>
+          <p class="text-xs whitespace-pre-line">${escapeHtml(state.factSummary || '요약 내용이 아직 입력되지 않았습니다.')}</p>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-bold text-blue-900 uppercase tracking-wide mb-1">3. 법리적 쟁점 및 성립요건 검토</h4>
+          ${elementsHtml}
+        </div>
+
+        <div>
+          <h4 class="text-xs font-bold text-blue-900 uppercase tracking-wide mb-1">4. 증거 관계 및 입증력 평가</h4>
+          ${evidenceHtml}
+        </div>
+
+        <div>
+          <h4 class="text-xs font-bold text-blue-900 uppercase tracking-wide mb-1">5. 종합 의견 및 수사 착안점</h4>
+          <p class="text-xs mb-1"><strong>민사/형사 구별:</strong> ${escapeHtml(state.civilVsCriminal || '미기재')}</p>
+          <div class="text-xs mb-1"><strong>핵심 질문사항:</strong><div class="whitespace-pre-line text-slate-700 mt-0.5">${escapeHtml(state.keyQuestions || '미기재')}</div></div>
+          <div class="text-xs mb-1"><strong>추가 확보 자료:</strong>${suppHtml}</div>
+          <p class="text-xs"><strong>종합 의견:</strong> ${escapeHtml(state.overallOpinion || '미기재')}</p>
+        </div>
+
+        <div class="pt-3 mt-3 border-t border-slate-300 flex items-center justify-between text-[11px] text-slate-500 print-break-avoid">
+          <span>※ 본 보고서는 수사·법률 검토 참고용 요약 자료입니다.</span>
+          <span>검토자 확인: ${escapeHtml(state.reviewer || '____________')} (서명)</span>
+        </div>
+      `;
+    }
+
+    function syncInputsFromState() {
+      document.getElementById('docType').value = state.docType;
+      document.getElementById('caseTitle').value = state.caseTitle;
+      document.getElementById('complainant').value = state.complainant;
+      document.getElementById('accused').value = state.accused;
+      document.getElementById('reviewer').value = state.reviewer;
+      document.getElementById('docNumber').value = state.docNumber;
+      document.getElementById('partyRelation').value = state.partyRelation;
+      document.getElementById('factSummary').value = state.factSummary;
+      document.getElementById('offenseDate').value = state.offenseDate;
+      document.getElementById('jurisdiction').value = state.jurisdiction;
+      document.getElementById('prosecutionCondition').value = state.prosecutionCondition;
+      document.getElementById('civilVsCriminal').value = state.civilVsCriminal;
+      document.getElementById('keyQuestions').value = state.keyQuestions;
+      document.getElementById('overallOpinion').value = state.overallOpinion;
+      renderCrimeChips();
+      renderElements();
+      renderEvidenceList();
+      renderSupplementChecks();
+      updateStatuteNotice();
+      renderReport();
+    }
+
+    function autoAnalyzeRawText() {
+      const text = document.getElementById('rawText').value.trim();
+      if (!text) {
+        showToast('먼저 분석할 원문을 입력해 주세요.');
+        return;
+      }
+
+      // Detect document type
+      if (text.includes('진정서') || text.includes('진정인')) state.docType = '진정서';
+      else if (text.includes('고발장') || text.includes('고발인')) state.docType = '고발장';
+      else if (text.includes('진술서')) state.docType = '진술서';
+      else state.docType = '고소장';
+
+      // Detect crimes by keywords
+      const detectedCrimes = [];
+      if (/사기|기망|편취|차용|투자금|변제/.test(text)) detectedCrimes.push('fraud');
+      if (/횡령|보관|유용|임의\s*소비/.test(text)) detectedCrimes.push('embezzlement');
+      if (/배임|임무\s*위배|재산상\s*손해/.test(text)) detectedCrimes.push('breach');
+      if (/명예훼손|허위사실|공연성|유포|게시글/.test(text)) detectedCrimes.push('defamation');
+      if (/모욕|욕설|경멸/.test(text)) detectedCrimes.push('insult');
+      if (detectedCrimes.length > 0) state.selectedCrimes = detectedCrimes;
+
+      // Extract amounts & dates
+      const amounts = text.match(/\d[\d,]*\s*(억|만)?\s*원/g) || [];
+      const dates = text.match(/20\d{2}[.\-\/년]\s*\d{1,2}[.\-\/월]\s*\d{1,2}일?/g) || [];
+
+      if (dates.length > 0) {
+        const lastDate = dates[dates.length - 1].replace(/[년월]/g, '-').replace(/[일.\s\/]/g, '').replace(/-+/g, '-');
+        const parts = lastDate.split('-').filter(Boolean);
+        if (parts.length === 3) {
+          state.offenseDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+        }
+      }
+
+      // Extract evidence clues
+      const evMap = [
+        { regex: /계좌|이체|송금|입금/, name: '계좌이체 내역', note: '자금 흐름 및 피해 금액 입증용' },
+        { regex: /카톡|카카오톡|문자|메시지|대화/, name: '문자/메신저 대화록', note: '기망·약정·발언 경위 확인' },
+        { regex: /계약서|차용증|각서|약정서/, name: '계약서/차용증', note: '당사자 간 약정 내용 확인' },
+        { regex: /녹취|녹음/, name: '녹취록', note: '당사자 진술 및 범의 확인' },
+        { regex: /캡처|게시글|댓글|영상/, name: '게시물 캡처본', note: '표현 내용 및 공연성 입증' }
+      ];
+      evMap.forEach((item, idx) => {
+        if (item.regex.test(text) && !state.evidences.some(e => e.name === item.name)) {
+          state.evidences.push({
+            id: Date.now() + idx,
+            name: item.name,
+            strength: '보통 (보강 필요)',
+            note: item.note
+          });
+        }
+      });
+
+      if (!state.factSummary) {
+        state.factSummary = text.length > 260 ? text.slice(0, 260) + '...' : text;
+      }
+
+      const badges = document.getElementById('extractBadges');
+      badges.innerHTML = `
+        <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-800 font-medium">탐지 죄명: ${detectedCrimes.length}건</span>
+        <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700">금액 단서: ${amounts.slice(0, 3).join(', ') || '없음'}</span>
+        <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700">날짜 단서: ${dates.length}건</span>
+      `;
+
+      syncInputsFromState();
+      showToast('원문에서 주요 혐의와 증거 단서를 추출해 반영했습니다.');
+    }
+
+    function loadSample(type) {
+      initElementDefaults();
+      if (type === 'fraud') {
+        document.getElementById('rawText').value = '고소인 김철수는 피고소인 박영희로부터 2024년 5월 10일 "신규 프랜차이즈 매장 인수 자금이 급히 필요하니 5,000만 원을 빌려주면 3개월 뒤 이자와 함께 변제하겠다"는 말을 듣고 같은 날 피고소인 계좌로 5,000만 원을 송금하였습니다. 그러나 확인 결과 피고소인은 당시 이미 다수의 채무로 신용불량 상태였고 해당 자금을 기존 채무 변제에 임의 소비하였습니다. 카카오톡 대화록 및 계좌이체 내역서를 첨부합니다.';
+        state.docType = '고소장';
+        state.caseTitle = '프랜차이즈 투자·차용금 편취 사기 고소';
+        state.complainant = '김철수';
+        state.accused = '박영희';
+        state.partyRelation = '지인 소개로 알게 된 후 사업 자금 명목으로 금전 거래 발생';
+        state.factSummary = '피고소인은 2024. 5. 10. 변제 의사 및 능력이 없음에도 매장 인수 자금 명목으로 5,000만 원을 교부받아 편취함.';
+        state.offenseDate = '2024-05-10';
+        state.jurisdiction = '피고소인 주소지 또는 송금지 관할 경찰서';
+        state.prosecutionCondition = '일반 범죄 (고소 불요)';
+        state.selectedCrimes = ['fraud'];
+        state.elementStatus.f1 = { status: '충족', note: '매장 인수 자금이라는 허위 용도 고지 및 변제능력 은폐' };
+        state.elementStatus.f2 = { status: '충족', note: '고소인이 착오에 빠져 5,000만 원 계좌 이체' };
+        state.elementStatus.f3 = { status: '충족', note: '이체 즉시 재산상 손해 발생' };
+        state.elementStatus.f4 = { status: '불명확', note: '차용 당시 채무초과 상태 입증을 위한 금융자료 추가 확인 필요' };
+        state.evidences = [
+          { id: 1, name: '계좌이체 내역서', strength: '입증 충분', note: '5,000만 원 송금 일시 및 금액 특정' },
+          { id: 2, name: '카카오톡 대화록', strength: '보통 (보강 필요)', note: '차용 명목 및 변제 약속 언급 확인' }
+        ];
+        state.civilVsCriminal = '단순 채무불이행(민사)이 아닌 차용 당시 변제 자력 결여 및 용도 기망 여부가 핵심 쟁점';
+        state.keyQuestions = CRIME_CATALOG.fraud.questions.join('\n');
+        state.supplementChecks = [SUPPLEMENT_OPTIONS[0], SUPPLEMENT_OPTIONS[3]];
+        state.overallOpinion = '기망 및 처분행위는 소명되나, 범의(변제능력 결여) 입증을 위해 피고소인 계좌의 자금 사용처 추적이 우선 필요함.';
+      } else {
+        document.getElementById('rawText').value = '진정인 이영수는 2025년 2월 14일 회사 사내 익명 게시판 및 단체 채팅방에서 피진정인 최민수가 "이영수가 거래처로부터 뒷돈을 받았다"는 허위 사실을 유포하여 명예를 훼손하였다며 처벌을 요청합니다. 게시글 캡처본을 제출합니다.';
+        state.docType = '진정서';
+        state.caseTitle = '사내 허위사실 유포 명예훼손 진정';
+        state.complainant = '이영수';
+        state.accused = '최민수 (또는 게시자 성명불상)';
+        state.partyRelation = '동일 직장 내 근무하는 동료 관계';
+        state.factSummary = '피진정인이 2025. 2. 14. 사내 게시판·단톡방에 진정인이 거래처 리베이트를 수수했다는 허위 사실을 적시함.';
+        state.offenseDate = '2025-02-14';
+        state.jurisdiction = '발생지 또는 피진정인 주거지 관할 경찰서';
+        state.prosecutionCondition = '반의사불벌죄 (처벌불원 시 불기소)';
+        state.selectedCrimes = ['defamation'];
+        state.elementStatus.d1 = { status: '충족', note: '사내 게시판 및 다수인 참여 단톡방으로 공연성 인정' };
+        state.elementStatus.d2 = { status: '충족', note: '실명 거론 및 리베이트 수수라는 구체적 사실 적시' };
+        state.elementStatus.d3 = { status: '불명확', note: '게시자 특정 및 허위성 인식 여부 확인 필요' };
+        state.evidences = [
+          { id: 1, name: '게시글 캡처본', strength: '보통 (보강 필요)', note: '작성 일시, URL, 열람자 수 등 메타정보 보완 필요' }
+        ];
+        state.civilVsCriminal = '형사상 명예훼손(제307조) 성립 여부 및 반의사불벌죄에 따른 합의 의사 확인 필요';
+        state.keyQuestions = CRIME_CATALOG.defamation.questions.join('\n');
+        state.supplementChecks = [SUPPLEMENT_OPTIONS[1], SUPPLEMENT_OPTIONS[4]];
+        state.overallOpinion = '게시자 특정 및 진정인의 처벌 의사(반의사불벌죄) 확인 후, 적시 사실의 진실성·공익성 항변 검토 필요.';
+      }
+      syncInputsFromState();
+      showToast('샘플 사건 데이터를 불러왔습니다.');
+    }
+
+    // Event Bindings
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.activeTab = btn.dataset.tab;
+        renderTabs();
+      });
+    });
+
+    const inputBindings = [
+      ['docType', 'change'],
+      ['caseTitle', 'input'],
+      ['complainant', 'input'],
+      ['accused', 'input'],
+      ['reviewer', 'input'],
+      ['docNumber', 'input'],
+      ['partyRelation', 'input'],
+      ['factSummary', 'input'],
+      ['offenseDate', 'change'],
+      ['jurisdiction', 'input'],
+      ['prosecutionCondition', 'change'],
+      ['civilVsCriminal', 'input'],
+      ['keyQuestions', 'input'],
+      ['overallOpinion', 'input']
+    ];
+    inputBindings.forEach(([id, evt]) => {
+      document.getElementById(id).addEventListener(evt, e => {
+        state[id] = e.target.value;
+        if (id === 'offenseDate') updateStatuteNotice();
+        renderReport();
+      });
+    });
+
+    document.getElementById('btnAddEvidence').addEventListener('click', () => {
+      const name = document.getElementById('evName').value.trim();
+      const strength = document.getElementById('evStrength').value;
+      const note = document.getElementById('evNote').value.trim();
+      if (!name) {
+        showToast('입증자료명을 입력해 주세요.');
+        return;
+      }
+      state.evidences.push({ id: Date.now(), name, strength, note });
+      document.getElementById('evName').value = '';
+      document.getElementById('evNote').value = '';
+      renderEvidenceList();
+      renderReport();
+    });
+
+    document.getElementById('btnSuggestQuestions').addEventListener('click', () => {
+      const qs = state.selectedCrimes.flatMap(k => CRIME_CATALOG[k].questions);
+      state.keyQuestions = qs.join('\n');
+      document.getElementById('keyQuestions').value = state.keyQuestions;
+      renderReport();
+      showToast('선택된 죄명 기준 추천 질문사항을 채웠습니다.');
+    });
+
+    document.getElementById('btnAutoAnalyze').addEventListener('click', autoAnalyzeRawText);
+    document.getElementById('btnLoadSampleFraud').addEventListener('click', () => loadSample('fraud'));
+    document.getElementById('btnLoadSampleDefamation').addEventListener('click', () => loadSample('defamation'));
+
+    document.getElementById('btnResetAll').addEventListener('click', () => {
+      document.getElementById('rawText').value = '';
+      document.getElementById('extractBadges').innerHTML = '<span>추출 대기 중</span>';
+      Object.assign(state, {
+        docType: '고소장', caseTitle: '', complainant: '', accused: '', reviewer: '', docNumber: '',
+        partyRelation: '', factSummary: '', offenseDate: '', jurisdiction: '',
+        prosecutionCondition: '일반 범죄 (고소 불요)', selectedCrimes: ['fraud'],
+        elementStatus: {}, evidences: [], civilVsCriminal: '',
+        keyQuestions: '', supplementChecks: [], overallOpinion: ''
+      });
+      initElementDefaults();
+      syncInputsFromState();
+      showToast('모든 입력 내용을 초기화했습니다.');
+    });
+
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    async function extractPdfText(arrayBuffer) {
+      if (!window.pdfjsLib) {
+        throw new Error('PDF.js 라이브러리를 불러오지 못했습니다.');
+      }
+      const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pages = [];
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        const strings = content.items.map(item => item.str);
+        pages.push(strings.join(' '));
+      }
+      return { text: pages.join('\n\n').trim(), numPages: pdf.numPages };
+    }
+
+    document.getElementById('fileInput').addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      if (isPdf) {
+        showToast(`'${file.name}' PDF를 읽는 중입니다...`);
+        try {
+          const buf = await file.arrayBuffer();
+          const { text, numPages } = await extractPdfText(buf);
+          if (!text) {
+            showToast('PDF에서 추출할 텍스트가 없습니다. 스캔본(이미지 PDF)인지 확인해 주세요.');
+            return;
+          }
+          document.getElementById('rawText').value = text;
+          showToast(`'${file.name}' (${numPages}페이지) 텍스트를 불러왔습니다.`);
+        } catch (err) {
+          showToast('PDF를 읽는 중 오류가 발생했습니다: ' + (err.message || '파일 확인 필요'));
+        }
+      } else {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          document.getElementById('rawText').value = ev.target.result || '';
+          showToast(`'${file.name}' 파일을 불러왔습니다.`);
+        };
+        reader.readAsText(file, 'utf-8');
+      }
+      e.target.value = '';
+    });
+
+    document.getElementById('btnCopyReport').addEventListener('click', () => {
+      const md = generateMarkdownReport();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(md).then(() => showToast('보고서를 클립보드에 복사했습니다.')).catch(() => fallbackCopy(md));
+      } else {
+        fallbackCopy(md);
+      }
+    });
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('보고서를 클립보드에 복사했습니다.');
+      } catch (e) {
+        showToast('복사에 실패했습니다. .md 저장을 이용해 주세요.');
+      }
+      document.body.removeChild(ta);
+    }
+
+    document.getElementById('btnDownloadMd').addEventListener('click', () => {
+      const md = generateMarkdownReport();
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${state.caseTitle || '사건분석_보고서'}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('마크다운(.md) 보고서를 저장했습니다.');
+    });
+
+    document.getElementById('btnPrint').addEventListener('click', () => window.print());
+
+    // Register Service Worker for standalone PWA install & offline shell
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+
+    document.getElementById('btnInstallPwa').addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+      } else {
+        document.getElementById('pwaModal').classList.remove('hidden');
+      }
+    });
+    document.getElementById('btnClosePwaModal').addEventListener('click', () => {
+      document.getElementById('pwaModal').classList.add('hidden');
+    });
+    document.getElementById('btnConfirmPwaModal').addEventListener('click', () => {
+      document.getElementById('pwaModal').classList.add('hidden');
+    });
+
+    // Initialize with Fraud Sample so the app opens rich and immediately usable
+    loadSample('fraud');
+    renderTabs();
+  </script>
+</body>
+</html>

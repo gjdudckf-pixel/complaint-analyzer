@@ -1,0 +1,25 @@
+{
+  "name": "고소장·진정서 핵심 쟁점 분석기",
+  "short_name": "쟁점분석기",
+  "description": "고소장, 진정서, 고발장 핵심 쟁점·성립요건·증거 분석 및 요약 보고서 작성기",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
